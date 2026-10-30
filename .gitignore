@@ -1,5 +1,5 @@
 .env
 .claude/settings.local.json
 
-# SQLite baza, ustvarjena s PB/seed.py
+# SQLite baza, ustvarjena iz PB/schema.sql in PB/insert.sql
 PB/*.db

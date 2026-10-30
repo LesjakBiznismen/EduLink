@@ -3,28 +3,22 @@
 | Datoteka | Namen |
 |---|---|
 | `schema.sql` | Shema SQLite baze (tabele, tuji ključi, omejitve, indeksi, sprožilci, pogledi) |
-| `seed.py` | Ustvari `edulink.db` iz sheme in jo napolni s testnimi podatki |
+| `insert.sql` | INSERT stavki s testnimi podatki |
 | `edulink_initialize.SQL` | Starejša shema za MySQL |
 
 ## Zagon
 
-Potreben je samo Python 3 (modul `sqlite3` je že vgrajen).
+Z orodjem [`sqlite3`](https://sqlite.org/download.html) (najprej shema, nato podatki):
 
 ```bash
 cd PB
-python seed.py              # ustvari PB/edulink.db
-python seed.py drug.db      # ali bazo na drugi poti
-```
-
-Skripta vsakič izbriše obstoječo bazo in jo ustvari znova. Roki nalog in dogodki so
-določeni glede na današnji datum, zato je baza vedno "sveža". Datoteka `edulink.db` je v
-`.gitignore` in se ne shranjuje v repozitorij.
-
-Samo prazno bazo brez podatkov ustvarite z orodjem `sqlite3`:
-
-```bash
 sqlite3 edulink.db < schema.sql
+sqlite3 edulink.db < insert.sql
 ```
+
+Lahko pa obe datoteki odprete in zaženete v orodju, kot je DB Browser for SQLite ali
+razširitev SQLite za VS Code. `schema.sql` najprej izbriše obstoječe tabele, zato jo lahko
+zaženete večkrat. Datoteka `edulink.db` je v `.gitignore` in se ne shranjuje v repozitorij.
 
 ## Testni podatki
 
@@ -35,6 +29,8 @@ Podatki sledijo demu (`frontend-demo/store.js`, `data.js`):
 - po 3 gradiva (zapiski, vaje, PDF prosojnice) in 3 naloge na predmet (ena s preteklim rokom),
 - oddaje učencev; oddaje pretečenih nalog so ocenjene (1–5) s povratno informacijo,
 - dogodki v koledarju: testi, ustna spraševanja in šolski dogodki.
+
+Roki in dogodki so postavljeni okoli 30. 10. 2026.
 
 Prijava: uporabniško ime `admin`, učitelji npr. `jan.novak.u1`, učenci npr. `jan.novak1`.
 Vsi imajo testno geslo `edulink123` (shranjeno kot PBKDF2-SHA256 hash).

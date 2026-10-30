@@ -1,7 +1,7 @@
 -- EduLink – shema podatkovne baze za SQLite.
 -- Zgrajena na podlagi podatkov, ki jih uporablja frontend-demo (store.js, data.js,
 -- app.js, staff.js), in na podlagi MySQL sheme edulink_initialize.SQL.
--- Zagon: sqlite3 edulink.db < schema.sql  (ali python seed.py)
+-- Zagon: sqlite3 edulink.db < schema.sql, nato sqlite3 edulink.db < insert.sql
 
 PRAGMA foreign_keys = ON;
 
