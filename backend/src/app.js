@@ -9,6 +9,7 @@ import assignments from './routes/assignments.js'
 import auth from './routes/auth.js'
 import enrollments from './routes/enrollments.js'
 import subjects from './routes/subjects.js'
+import submissions from './routes/submissions.js'
 
 export const app = express()
 
@@ -24,6 +25,7 @@ app.use('/api/auth', auth)
 app.use('/api/subjects', authenticate, subjects)
 app.use('/api/me/subjects', authenticate, enrollments)
 app.use('/api/assignments', authenticate, assignments)
+app.use('/api/submissions', authenticate, submissions)
 
 app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Pot API ne obstaja.')))
 
