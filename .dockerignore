@@ -1,0 +1,9 @@
+.git
+.claude
+.env
+**/node_modules
+**/dist
+**/*.log
+PB/*.db
+frontend
+frontend-demo

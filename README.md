@@ -54,11 +54,22 @@ Po želji naloži testne podatke:
 mysql -u root -p edulink < PB/edulink_insert_test.SQL
 ```
 
-Celoten sistem (baza, backend, frontend, nginx) se zažene z:
+## Docker
+
+Celoten sistem se zažene z enim ukazom (potreben je samo Docker):
 
 ```bash
-docker-compose up
+docker compose up --build
 ```
+
+Aplikacija je nato na <http://localhost:8080>, API pa na <http://localhost:8080/api/>.
+
+- **backend** (`backend/Dockerfile`): Node.js + Express nad SQLite bazo. Ob prvem zagonu ustvari bazo iz `PB/schema.sql` in jo napolni s `PB/insert.sql` (izklop: `SEED=false`). Baza je v volumnu `db-data`.
+- **frontend** (`edulink-vite/Dockerfile`): zgradi React aplikacijo in jo postreže z nginx (`nginx/nginx.conf`), ki zahteve na `/api/` posreduje backendu.
+
+API (samo branje): `/api/health`, `/api/uporabniki?vloga=ucitelj`, `/api/predmeti`, `/api/predmeti/:id`, `/api/predmeti/:id/naloge`, `/api/predmeti/:id/gradiva`, `/api/koledar`.
+
+Ponastavitev baze na testne podatke: `docker compose down -v`, nato znova `docker compose up`. Vrata frontenda se spremenijo s spremenljivko `FRONTEND_PORT`.
 
 Skrivnosti (gesla, ključi) hrani v datoteki `.env`, ki ni v repozitoriju.
 

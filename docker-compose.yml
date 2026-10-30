@@ -1,0 +1,30 @@
+# EduLink: celoten sistem v Dockerju.
+#   docker compose up --build    -> aplikacija na http://localhost:8080
+#   docker compose down -v       -> ustavi in izbriše bazo (ob naslednjem zagonu se ustvari znova)
+name: edulink
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DB_PATH: /data/edulink.db
+      SEED: ${SEED:-true}
+    volumes:
+      - db-data:/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: edulink-vite/Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db-data:
