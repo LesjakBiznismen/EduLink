@@ -22,9 +22,14 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Datoteke, ki jih naložijo učitelji in učenci (backend)
+backend/uploads/
+
 # SQLite baza, ustvarjena iz PB/schema.sql in PB/insert.sql
 PB/*.db
 PB/*.db-journal
+PB/*.db-wal
+PB/*.db-shm
 PB/*.sqlite
 PB/*.sqlite3
 
