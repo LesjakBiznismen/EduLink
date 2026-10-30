@@ -1,23 +1,30 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { fullName } from '../lib/helpers.js'
 import { useApp } from '../context/appContext.js'
 
-// Prijava v predstavitveno različico (brez gesla): izbira vloge.
+// Prijava z uporabniškim imenom (ali e-naslovom) in geslom; vlogo določi strežnik.
 export default function Login() {
-  const { role: current, store, login } = useApp()
+  const { role, login } = useApp()
   const navigate = useNavigate()
-  const [role, setRole] = useState('ucenec')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => { document.title = 'Vstop · EduLink' }, [])
 
-  if (current) return <Navigate to="/predmeti" replace />
+  if (role) return <Navigate to="/predmeti" replace />
 
-  const onSubmit = e => {
+  const onSubmit = async e => {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
-    login(role, role === 'ucitelj' ? data.get('teacher') : null)
-    navigate('/predmeti')
+    setBusy(true)
+    setError('')
+    try {
+      await login(String(data.get('username')).trim(), String(data.get('password')))
+      navigate('/predmeti')
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
+    }
   }
 
   return (
@@ -26,31 +33,17 @@ export default function Login() {
         <Link to="/prijava"><img className="auth-logo" src="/slike/edulink-logo.png" alt="EduLink" /></Link>
         <form className="auth-form" onSubmit={onSubmit}>
           <h1>Prijava</h1>
-          <p>Vnesite uporabniško ime za vstop v učilnico.</p>
+          <p>Vnesite uporabniško ime in geslo za vstop v učilnico.</p>
           <label className="field">
-            Vloga
-            <select name="role" value={role} onChange={e => setRole(e.target.value)}>
-              <option value="ucenec">Učenec</option>
-              <option value="ucitelj">Učitelj</option>
-              <option value="admin">Administrator</option>
-            </select>
+            Uporabniško ime ali e-naslov
+            <input name="username" required autoComplete="username" placeholder="npr. jan.novak1" />
           </label>
-          {role === 'ucitelj' && (
-            <label className="field">
-              Učitelj
-              <select name="teacher">
-                {store.teachers.map(t => <option key={t.id} value={t.id}>{fullName(t)}</option>)}
-              </select>
-            </label>
-          )}
-          {role === 'ucenec' && (
-            <label className="field">
-              Uporabniško ime
-              <input name="username" placeholder="npr. ucenec" autoComplete="username" />
-            </label>
-          )}
-          <p className="note">Predstavitvena različica brez gesla. Podatki in oddaje ostanejo v tem brskalniku.</p>
-          <button className="ui-button primary" type="submit">Vstopi</button>
+          <label className="field">
+            Geslo
+            <input name="password" type="password" required autoComplete="current-password" />
+          </label>
+          <p className="form-error" role="alert">{error}</p>
+          <button className="ui-button primary" type="submit" disabled={busy}>{busy ? 'Prijavljanje …' : 'Vstopi'}</button>
           <p className="auth-bottom">Prvič tukaj? <Link to="/registracija">Ustvari profil</Link></p>
         </form>
       </main>

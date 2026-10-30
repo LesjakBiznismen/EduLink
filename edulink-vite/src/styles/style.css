@@ -329,3 +329,13 @@ a.top-profile:hover { background: var(--navy-hover); }
 @media (max-width: 720px) { .check-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 1100px) { .subject-columns { grid-template-columns: minmax(0, 1fr); gap: 32px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+/* Povezava s strežnikom: nalaganje, ocene, dogodki v koledarju */
+.app-loading { padding: 48px; color: var(--muted); }
+.profile-panel + .profile-panel { padding-top: 32px; margin-top: 40px; border-top: 1px solid var(--line); }
+.profile-panel > h2 { margin-bottom: 16px; font-size: 16px; font-weight: 600; }
+.grade-line { margin-top: 6px; }
+.grade-select { min-height: 30px; padding: 0 8px; background: #fff; border: 1px solid #c3ccda; }
+.calendar-event.is-event { color: var(--muted); background: var(--panel); border-left: 3px solid var(--line); cursor: default; }
+.calendar-event.is-event.test { border-left-color: var(--danger); }
+.calendar-event.is-event.pocitnice { border-left-color: #78966b; }

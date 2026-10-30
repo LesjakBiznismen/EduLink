@@ -1,53 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppContext } from './appContext.js'
-import { baseSubjects } from '../data/subjects.js'
-import { seed } from '../data/seed.js'
-import { fullName, initials, localIso } from '../lib/helpers.js'
-import { readJson, readText, removeText, submissionsTx, writeJson, writeText } from '../lib/storage.js'
+import { api, getToken, setToken, setUnauthorizedHandler } from '../lib/api.js'
+import { fullName, initials } from '../lib/helpers.js'
+import { downloadMaterial as fetchMaterial } from '../lib/materials.js'
 
-const STORE_KEY = 'edulink-staff-v1'
-const PROFILE_KEY = 'edulink-profile'
-const defaultProfile = { first: 'Ime', last: 'Priimek', email: '', school: '' }
+const labels = { ucenec: 'Učenec', ucitelj: 'Učitelj', admin: 'Administrator' }
 
-function loadStore() {
-  let state = null
-  try { state = JSON.parse(localStorage.getItem(STORE_KEY)) } catch { /* Shramba ni na voljo. */ }
-  if (!state?.subjects?.length) state = seed()
-  state.assignments ||= []
-  state.materials ||= []
-  state.removedMaterials ||= []
-  return state
-}
-
-// Roki so vezani na dan prvega obiska, da ostanejo enaki ob osvežitvi.
-function loadAnchor() {
-  const saved = readText('localStorage', 'edulink-schedule')
-  const base = saved && !Number.isNaN(Date.parse(saved)) ? new Date(saved) : new Date()
-  base.setHours(12, 0, 0, 0)
-  writeText('localStorage', 'edulink-schedule', base.toISOString())
-  return base
-}
-
-function loadSession() {
-  const role = readText('sessionStorage', 'edulink-role')
-  if (!['ucenec', 'ucitelj', 'admin'].includes(role)) return null
-  return { role, teacher: readText('sessionStorage', 'edulink-teacher') }
-}
-
+// Stanje aplikacije: prijavljeni uporabnik in podatki iz strežnika (predmeti, naloge, gradiva).
 export function AppProvider({ children }) {
-  const [store, setStore] = useState(loadStore)
-  const [anchor] = useState(loadAnchor)
-  const [profile, setProfile] = useState(() => ({ ...defaultProfile, ...readJson('localStorage', PROFILE_KEY, {}) }))
-  const [session, setSession] = useState(loadSession)
-  const [selected, setSelected] = useState(() => readJson('sessionStorage', 'edulink-subjects', []))
-  const [submissions, setSubmissions] = useState({})
+  const [user, setUser] = useState(null)
+  const [ready, setReady] = useState(() => !getToken())
+  const [subjects, setSubjects] = useState([])
+  const [selected, setSelected] = useState([])
+  const [assignments, setAssignments] = useState([])
+  const [materials, setMaterials] = useState([])
   const [message, setMessage] = useState('')
   const [chooserOpen, setChooserOpen] = useState(false)
   const toastTimer = useRef()
-
-  useEffect(() => {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)) } catch { /* Demo še vedno deluje do osvežitve. */ }
-  }, [store])
 
   const toast = useCallback(text => {
     setMessage(text)
@@ -55,112 +24,110 @@ export function AppProvider({ children }) {
     toastTimer.current = setTimeout(() => setMessage(''), 5000)
   }, [])
 
-  useEffect(() => {
-    submissionsTx('readonly', s => s.getAll())
-      .then(rows => setSubmissions(Object.fromEntries(rows.map(row => [row.id, row]))))
-      .catch(() => toast('Lokalna shramba ni na voljo. Oddaj trenutno ni mogoče shraniti.'))
-  }, [toast])
+  const reloadSubjects = useCallback(async () => setSubjects(await api.get('/subjects')), [])
+  const reloadAssignments = useCallback(async () => setAssignments(await api.get('/assignments')), [])
+  const reloadMaterials = useCallback(async () => setMaterials(await api.get('/materials')), [])
 
-  const updateStore = useCallback(change => {
-    setStore(current => {
-      const next = structuredClone(current)
-      change(next)
-      return next
-    })
-  }, [])
-
-  // Predmeti, naloge in gradiva so izpeljani iz osnovnih vsebin in sprememb administratorja/učiteljev.
-  const { subjects, assignments, materials } = useMemo(() => {
-    const date = offset => {
-      const d = new Date(anchor)
-      d.setDate(d.getDate() + offset)
-      return localIso(d)
-    }
-    const subjects = store.subjects.map(s => ({
-      short: s.name.slice(0, 3).toUpperCase(), color: '#5c8fba', topic: 'Uvod', task: 'Prva naloga',
-      description: 'Navodila za nalogo bo dodal učitelj.', text: 'Gradivo bo dodal učitelj.',
-      ...baseSubjects.find(b => b.id === s.id), ...s,
-    }))
-    const known = new Set(subjects.map(s => s.id))
-    const assignments = [
-      ...subjects.flatMap((s, i) => [
-        { id: `${s.id}-1`, subject: s.id, title: s.task, description: s.description, due: date(i + 1) },
-        { id: `${s.id}-2`, subject: s.id, title: `Ponavljanje: ${s.topic.toLowerCase()}`, description: 'Pripravite kratek povzetek poglavja in tri vprašanja za ponavljanje. Pri vsakem vprašanju napišite tudi odgovor.', due: date(i + 9) },
-      ]),
-      ...store.assignments.filter(a => known.has(a.subject)),
-    ]
-    const baseIds = new Set(baseSubjects.map(b => b.id))
-    const removed = new Set(store.removedMaterials)
-    const generated = subjects.flatMap(s => [
-      { id: `${s.id}-notes`, subject: s.id, title: s.topic, type: 'Zapiski', content: s.text, added: date(-2) },
-      { id: `${s.id}-practice`, subject: s.id, title: `Vaje · ${s.topic}`, type: 'Vaje', content: `${s.description}\n\nZa ponavljanje\n1. S svojimi besedami razložite ključne pojme.\n2. Dodajte svoj primer.\n3. Zapišite vprašanje, o katerem bi se želeli pogovoriti pri pouku.`, added: date(-4) },
+  // Po prijavi naloži vse, kar potrebujejo strani prijavljene vloge.
+  const loadData = useCallback(async current => {
+    const staff = current.role === 'admin'
+    const [subs, mine, list, mats] = await Promise.all([
+      api.get('/subjects'),
+      staff ? [] : api.get('/me/subjects'),
+      staff ? [] : api.get('/assignments'),
+      staff ? [] : api.get('/materials'),
     ])
-    const materials = [
-      ...generated.filter(m => baseIds.has(m.subject) && !removed.has(m.id)),
-      ...store.materials.filter(m => known.has(m.subject)),
-    ]
-    return { subjects, assignments, materials }
-  }, [store, anchor])
+    setSubjects(subs)
+    setSelected(mine)
+    setAssignments(list)
+    setMaterials(mats)
+  }, [])
 
-  const role = session?.role ?? null
-  const teacher = useMemo(
-    () => store.teachers.find(t => t.id === session?.teacher) || store.teachers[0],
-    [store.teachers, session],
-  )
-  const mySubjects = useMemo(
-    () => (role === 'ucitelj' ? subjects.filter(s => teacher.subjects.includes(s.id)) : []),
-    [role, subjects, teacher],
-  )
-  const identity = useMemo(() => {
-    if (role === 'admin') return { name: 'Administrator', initials: 'AD', label: 'Administrator' }
-    if (role === 'ucitelj') return { name: fullName(teacher), initials: initials(teacher), label: 'Učitelj' }
-    return { name: fullName(profile), initials: initials(profile) || 'IP', label: 'Učenec' }
-  }, [role, teacher, profile])
-
-  const login = useCallback((nextRole, teacherId) => {
-    writeText('sessionStorage', 'edulink-role', nextRole)
-    if (nextRole === 'ucitelj' && teacherId) writeText('sessionStorage', 'edulink-teacher', teacherId)
-    else removeText('sessionStorage', 'edulink-teacher')
-    try { writeJson('sessionStorage', 'edulink-subjects', []) } catch { /* Izbira se ne ohrani. */ }
+  const reset = useCallback(() => {
+    setToken(null)
+    setUser(null)
+    setSubjects([])
     setSelected([])
-    setSession({ role: nextRole, teacher: nextRole === 'ucitelj' ? teacherId : null })
+    setAssignments([])
+    setMaterials([])
   }, [])
 
-  const logout = useCallback(() => {
-    removeText('sessionStorage', 'edulink-role')
-    removeText('sessionStorage', 'edulink-teacher')
-    setSession(null)
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      reset()
+      toast('Seja je potekla. Prijavite se znova.')
+    })
+  }, [reset, toast])
+
+  // Ob osvežitvi strani obnovi sejo iz shranjenega žetona.
+  useEffect(() => {
+    if (!getToken()) return
+    api.get('/auth/me')
+      .then(async ({ user: current }) => {
+        await loadData(current)
+        setUser(current)
+      })
+      .catch(() => reset())
+      .finally(() => setReady(true))
+  }, [loadData, reset])
+
+  const start = useCallback(async ({ token, user: current }) => {
+    setToken(token)
+    await loadData(current)
+    setUser(current)
+    setChooserOpen(false)
+    return current
+  }, [loadData])
+
+  const login = useCallback(async (username, password) => start(await api.post('/auth/login', { username, password })), [start])
+  const register = useCallback(async values => start(await api.post('/auth/register', values)), [start])
+  const logout = useCallback(() => reset(), [reset])
+
+  const saveProfile = useCallback(async values => {
+    const next = await api.put('/profile', values)
+    setUser(next)
+    return next
   }, [])
 
-  // Vrže napako, če brskalnik ne dovoli shranjevanja.
-  const saveProfile = useCallback(values => {
-    const next = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, String(v).trim()]))
-    writeJson('localStorage', PROFILE_KEY, next)
-    setProfile(next)
-  }, [])
-
-  const saveSelection = useCallback(next => {
+  // Učenec shrani izbor predmetov (vpise); naloge in gradiva se nato naložijo znova.
+  const saveSelection = useCallback(async next => {
     try {
-      writeJson('sessionStorage', 'edulink-subjects', next)
-      setSelected(next)
+      setSelected(await api.put('/me/subjects', { subjects: next }))
+      await Promise.all([reloadAssignments(), reloadMaterials(), reloadSubjects()])
       return true
-    } catch {
-      toast('Brskalnik ne dovoli shranjevanja izbora. Omogočite lokalno shrambo.')
+    } catch (error) {
+      toast(error.message)
       return false
     }
-  }, [toast])
+  }, [reloadAssignments, reloadMaterials, reloadSubjects, toast])
 
-  const saveSubmission = useCallback(async record => {
-    await submissionsTx('readwrite', s => s.put(record))
-    setSubmissions(current => ({ ...current, [record.id]: record }))
+  const saveSubmission = useCallback(async (assignmentId, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    const submission = await api.upload(`/assignments/${assignmentId}/submission`, form)
+    setAssignments(current => current.map(a => (a.id === assignmentId ? { ...a, submission } : a)))
+    return submission
   }, [])
 
-  const studentSubjects = useMemo(() => subjects.filter(s => selected.includes(s.id)), [subjects, selected])
+  const downloadMaterial = useCallback((material, subjectName) => (
+    fetchMaterial(material, subjectName).catch(error => toast(error.message))
+  ), [toast])
+
+  const role = user?.role ?? null
+  const submissions = useMemo(
+    () => Object.fromEntries(assignments.filter(a => a.submission).map(a => [a.id, a.submission])),
+    [assignments],
+  )
+  const studentSubjects = useMemo(() => (role === 'ucenec' ? subjects.filter(s => selected.includes(s.id)) : []), [role, subjects, selected])
+  const mySubjects = useMemo(() => (role === 'ucitelj' ? subjects.filter(s => selected.includes(s.id)) : []), [role, subjects, selected])
+  const identity = useMemo(() => (user
+    ? { name: fullName(user), initials: initials(user) || 'IP', label: labels[user.role] }
+    : null), [user])
 
   const value = {
-    store, updateStore, subjects, assignments, materials,
-    profile, saveProfile, session, role, teacher, mySubjects, identity, login, logout,
-    selected, saveSelection, studentSubjects, submissions, saveSubmission,
+    ready, user, role, identity, profile: user, teacher: user, login, register, logout, saveProfile,
+    subjects, assignments, materials, reloadSubjects, reloadAssignments, reloadMaterials,
+    selected, saveSelection, studentSubjects, mySubjects, submissions, saveSubmission, downloadMaterial,
     toast, chooserOpen, setChooserOpen,
   }
 

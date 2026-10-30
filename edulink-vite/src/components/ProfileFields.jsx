@@ -5,7 +5,7 @@ const fields = [
   ['school', 'Šola', 'text', 'organization'],
 ]
 
-export default function ProfileFields({ values }) {
+export default function ProfileFields({ values, emailRequired = false }) {
   return (
     <div className="profile-fields">
       {fields.map(([name, label, type, autoComplete]) => (
@@ -14,8 +14,8 @@ export default function ProfileFields({ values }) {
           <input
             name={name}
             type={type}
-            defaultValue={values[name]}
-            required={['first', 'last'].includes(name)}
+            defaultValue={values[name] || ''}
+            required={['first', 'last'].includes(name) || (emailRequired && name === 'email')}
             maxLength={100}
             autoComplete={autoComplete}
           />

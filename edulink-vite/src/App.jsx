@@ -35,7 +35,7 @@ export default function App() {
         <Route path="naloge" element={<ByRole ucenec={<Assignments />} ucitelj={<TeacherSubmissions />} />} />
         <Route path="gradiva" element={<ByRole ucenec={<Materials />} ucitelj={<TeacherMaterials />} />} />
         <Route path="koledar" element={<ByRole ucenec={<Calendar />} />} />
-        <Route path="profil" element={<ByRole ucenec={<Profile />} ucitelj={<Profile />} />} />
+        <Route path="profil" element={<ByRole ucenec={<Profile />} ucitelj={<Profile />} admin={<Profile />} />} />
         <Route path="ucitelji" element={<ByRole admin={<AdminPeople kind="teachers" />} />} />
         <Route path="ucenci" element={<ByRole admin={<AdminPeople kind="students" />} />} />
       </Route>

@@ -14,7 +14,7 @@ const placeholders = { ucenec: 'Poišči naloge', ucitelj: 'Poišči oddajo', ad
 
 // Okvir aplikacije: zgornja vrstica, stranska navigacija in seznam predmetov.
 export default function Layout() {
-  const { role, identity, logout, studentSubjects, mySubjects, assignments, selected, submissions, chooserOpen, setChooserOpen } = useApp()
+  const { ready, role, identity, logout, studentSubjects, mySubjects, assignments, selected, submissions, chooserOpen, setChooserOpen } = useApp()
   const { pathname, search } = useLocation()
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -26,6 +26,7 @@ export default function Layout() {
     document.title = `${names[pathname] || 'EduLink'} · EduLink`
   }, [pathname, role, subjectMatch])
 
+  if (!ready) return <p className="app-loading" role="status">Nalaganje …</p>
   if (!role) return <Navigate to="/prijava" replace />
 
   const isStaff = role !== 'ucenec'
@@ -60,7 +61,7 @@ export default function Layout() {
             <Icon name="search" />
             <input name="q" type="search" placeholder={placeholders[role]} aria-label={placeholders[role]} defaultValue={params.get('q') || ''} />
           </form>
-          {role === 'admin' ? <div className="top-profile">{profileChip}</div> : <Link className="top-profile" to="/profil">{profileChip}</Link>}
+          <Link className="top-profile" to="/profil">{profileChip}</Link>
         </header>
         <div className="frame">
           <aside className="rail">
@@ -76,11 +77,9 @@ export default function Layout() {
               ))}
             </nav>
             <div className="rail-footer">
-              {role !== 'admin' && (
-                <Link className="rail-link" to="/profil" aria-current={pathname === '/profil' ? 'page' : undefined}>
-                  <Icon name="user" /><span>Profil</span>
-                </Link>
-              )}
+              <Link className="rail-link" to="/profil" aria-current={pathname === '/profil' ? 'page' : undefined}>
+                <Icon name="user" /><span>Profil</span>
+              </Link>
               <Link className="rail-link" to="/prijava" onClick={logout}><Icon name="logout" /><span>Odjava</span></Link>
             </div>
           </aside>
