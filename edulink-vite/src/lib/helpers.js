@@ -11,12 +11,6 @@ export const imgSrc = s => `/slike/predmeti/${s.image}${s.image.includes('.') ? 
 
 export const plural = (n, one, two, few, many) => `${n} ${n % 100 === 1 ? one : n % 100 === 2 ? two : [3, 4].includes(n % 100) ? few : many}`
 
-export const hash = text => {
-  let h = 0
-  for (const c of text) h = (h * 31 + c.charCodeAt(0)) >>> 0
-  return h
-}
-
 // eslint-disable-next-line no-control-regex
 export const safeFilename = value => value.replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/[. ]+$/g, '').slice(0, 150)
 
