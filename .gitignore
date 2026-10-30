@@ -1,5 +1,48 @@
+# Skrivnosti in lokalna nastavitev
 .env
-.claude/settings.local.json
+.env.*
+!.env.example
+*.local
+
+# Odvisnosti (obnovi jih `npm install`)
+node_modules/
+
+# Rezultati gradnje
+dist/
+dist-ssr/
+build/
+coverage/
+.vite/
+
+# Dnevniki
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # SQLite baza, ustvarjena iz PB/schema.sql in PB/insert.sql
 PB/*.db
+PB/*.db-journal
+PB/*.sqlite
+PB/*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Orodja in urejevalniki
+.claude/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.sw?
+
+# Operacijski sistem
+.DS_Store
+Thumbs.db
+Desktop.ini
