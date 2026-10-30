@@ -34,7 +34,10 @@ CREATE TABLE uporabniki (
     priimek          TEXT    NOT NULL CHECK (length(trim(priimek)) > 0),
     vloga            TEXT    NOT NULL CHECK (vloga IN ('ucenec', 'ucitelj', 'admin')),
     id_sola          INTEGER REFERENCES sole(id_sola) ON DELETE SET NULL,
-    aktiven          INTEGER NOT NULL DEFAULT 1 CHECK (aktiven IN (0, 1)),
+    telefon          TEXT,   -- telefon, naziv in kabinet izpolni učitelj na profilu
+    naziv            TEXT,
+    kabinet          TEXT,
+    aktiven         INTEGER NOT NULL DEFAULT 1 CHECK (aktiven IN (0, 1)),
     ustvarjeno_ob    TEXT    NOT NULL DEFAULT (datetime('now')),
     posodobljeno_ob  TEXT    NOT NULL DEFAULT (datetime('now'))
 );
