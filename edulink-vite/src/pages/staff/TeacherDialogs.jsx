@@ -1,44 +1,34 @@
 import { useState } from 'react'
 import Dialog from '../../components/Dialog.jsx'
 import Icon from '../../components/Icon.jsx'
+import { api } from '../../lib/api.js'
 import { MAX_FILE_SIZE, localIso } from '../../lib/helpers.js'
-import { ACCEPT, ALLOWED_EXTENSIONS, extensionOf, fileKind } from '../../lib/staff.js'
-import { filesTx } from '../../lib/storage.js'
+import { ACCEPT, ALLOWED_EXTENSIONS, extensionOf } from '../../lib/staff.js'
 import { useApp } from '../../context/appContext.js'
 
-// Učitelj naloži gradivo; datoteka gre v IndexedDB, podatki o gradivu v localStorage.
+// Učitelj naloži gradivo; datoteka in podatki o gradivu se shranijo na strežnik.
 export function MaterialUploadDialog({ subjectId, onClose }) {
-  const { mySubjects, teacher, updateStore, toast } = useApp()
+  const { mySubjects, reloadMaterials, toast } = useApp()
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const onSubmit = async e => {
     e.preventDefault()
     const values = new FormData(e.currentTarget)
     const file = values.get('file')
     if (!file?.size && !file?.name) { setError('Izberite datoteko.'); return }
-    const ext = extensionOf(file.name)
-    if (!ALLOWED_EXTENSIONS.includes(ext)) { setError('Dovoljene so samo datoteke PDF, Word (doc, docx), PowerPoint (ppt, pptx) in slike (png, jpg, gif, webp).'); return }
+    if (!ALLOWED_EXTENSIONS.includes(extensionOf(file.name))) { setError('Dovoljene so samo datoteke PDF, Word (doc, docx), PowerPoint (ppt, pptx) in slike (png, jpg, gif, webp).'); return }
     if (file.size > MAX_FILE_SIZE) { setError('Datoteka je prevelika. Izberite datoteko do 20 MB.'); return }
-    const id = `m-${Date.now()}`
+    setBusy(true)
     try {
-      await filesTx('readwrite', s => s.put(file, id))
-    } catch {
-      setError('Datoteke ni bilo mogoče shraniti. Preverite prostor in dovoljenja brskalnika.')
-      return
+      await api.upload('/materials', values)
+      await reloadMaterials()
+      onClose()
+      toast('Gradivo je naloženo.')
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
     }
-    const material = {
-      id,
-      subject: values.get('subject'),
-      title: String(values.get('title')).trim() || file.name.replace(/\.[^.]+$/, ''),
-      type: values.get('type'),
-      content: `Priložena datoteka: ${file.name} (${fileKind(ext)}, ${Math.max(1, Math.round(file.size / 1024))} kB).`,
-      added: localIso(),
-      by: teacher.id,
-      fileName: file.name,
-    }
-    updateStore(s => { s.materials.push(material) })
-    onClose()
-    toast('Gradivo je naloženo.')
   }
 
   return (
@@ -49,7 +39,7 @@ export function MaterialUploadDialog({ subjectId, onClose }) {
       actions={(
         <>
           <button className="ui-button" type="button" onClick={onClose}>Prekliči</button>
-          <button className="ui-button primary" type="submit" form="material-form">Naloži</button>
+          <button className="ui-button primary" type="submit" form="material-form" disabled={busy}>{busy ? 'Nalaganje …' : 'Naloži'}</button>
         </>
       )}
     >
@@ -77,31 +67,32 @@ export function MaterialUploadDialog({ subjectId, onClose }) {
 }
 
 export function AssignmentCreateDialog({ subjectId, onClose }) {
-  const { subjects, updateStore, toast } = useApp()
+  const { subjects, reloadAssignments, toast } = useApp()
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
   const [defaultDue] = useState(() => {
     const d = new Date()
     d.setDate(d.getDate() + 7)
     return localIso(d)
   })
 
-  const onSubmit = e => {
+  const onSubmit = async e => {
     e.preventDefault()
     const values = new FormData(e.currentTarget)
     const title = String(values.get('title')).trim()
     const due = String(values.get('due'))
     if (!title) { setError('Vnesite naslov naloge.'); return }
     if (!due) { setError('Izberite rok oddaje.'); return }
-    const assignment = {
-      id: `a-${Date.now()}`,
-      subject: subjectId,
-      title,
-      description: String(values.get('description')).trim() || 'Navodila za nalogo bo dodal učitelj.',
-      due,
+    setBusy(true)
+    try {
+      await api.post('/assignments', { subject: subjectId, title, description: String(values.get('description')).trim(), due })
+      await reloadAssignments()
+      onClose()
+      toast('Naloga je dodana.')
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
     }
-    updateStore(s => { s.assignments.push(assignment) })
-    onClose()
-    toast('Naloga je dodana.')
   }
 
   return (
@@ -112,7 +103,7 @@ export function AssignmentCreateDialog({ subjectId, onClose }) {
       actions={(
         <>
           <button className="ui-button" type="button" onClick={onClose}>Prekliči</button>
-          <button className="ui-button primary" type="submit" form="assignment-form">Dodaj nalogo</button>
+          <button className="ui-button primary" type="submit" form="assignment-form" disabled={busy}>Dodaj nalogo</button>
         </>
       )}
     >
@@ -129,18 +120,19 @@ export function AssignmentCreateDialog({ subjectId, onClose }) {
 }
 
 export function MaterialDeleteDialog({ materialId, onClose }) {
-  const { materials, updateStore, toast } = useApp()
+  const { materials, reloadMaterials, toast } = useApp()
   const material = materials.find(m => m.id === materialId)
   if (!material) return null
 
-  const remove = () => {
-    filesTx('readwrite', s => s.delete(materialId)).catch(() => {})
-    updateStore(s => {
-      if (s.materials.some(m => m.id === materialId)) s.materials = s.materials.filter(m => m.id !== materialId)
-      else if (!s.removedMaterials.includes(materialId)) s.removedMaterials.push(materialId)
-    })
-    onClose()
-    toast('Gradivo je izbrisano.')
+  const remove = async () => {
+    try {
+      await api.delete(`/materials/${materialId}`)
+      await reloadMaterials()
+      onClose()
+      toast('Gradivo je izbrisano.')
+    } catch (err) {
+      toast(err.message)
+    }
   }
 
   return (

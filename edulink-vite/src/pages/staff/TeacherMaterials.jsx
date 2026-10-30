@@ -4,13 +4,12 @@ import Icon from '../../components/Icon.jsx'
 import MaterialDialog from '../../components/MaterialDialog.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
 import { dateLabel } from '../../lib/helpers.js'
-import { downloadMaterial } from '../../lib/materials.js'
 import { useApp } from '../../context/appContext.js'
 import { MaterialDeleteDialog, MaterialUploadDialog } from './TeacherDialogs.jsx'
 
 // Učitelj: gradiva pri njegovih predmetih.
 export default function TeacherMaterials() {
-  const { mySubjects, materials, subjects } = useApp()
+  const { mySubjects, materials, subjects, downloadMaterial } = useApp()
   const [subject, setSubject] = useState('')
   const [dialog, setDialog] = useState(null) // {type: 'upload' | 'delete' | 'view', id?}
 

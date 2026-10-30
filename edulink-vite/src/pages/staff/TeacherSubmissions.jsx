@@ -1,34 +1,37 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import EmptyState from '../../components/EmptyState.jsx'
 import Icon from '../../components/Icon.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
 import Pager from '../../components/Pager.jsx'
-import { SubmissionDownload } from '../../components/SubmissionGroup.jsx'
-import { dateTime, normalize } from '../../lib/helpers.js'
-import { paginate, submissionsFor } from '../../lib/staff.js'
+import { GradeSelect, SubmissionDownload } from '../../components/SubmissionGroup.jsx'
+import { api } from '../../lib/api.js'
+import { dateTime, fullName, normalize } from '../../lib/helpers.js'
+import { paginate } from '../../lib/staff.js'
 import { useApp } from '../../context/appContext.js'
 
 // Učitelj: vse oddane naloge pri njegovih predmetih.
 export default function TeacherSubmissions() {
-  const { mySubjects, assignments, store, submissions, profile, subjects } = useApp()
+  const { mySubjects, subjects, toast } = useApp()
   const [params] = useSearchParams()
   const [query, setQuery] = useState(params.get('q') || '')
   const [subject, setSubject] = useState('')
   const [page, setPage] = useState(1)
+  const [rows, setRows] = useState(null)
+
+  useEffect(() => {
+    api.get('/submissions').then(setRows).catch(err => toast(err.message))
+  }, [toast])
 
   if (!mySubjects.length) {
     return <><PageHeader title="Oddaje" /><EmptyState title="Nimate predmetov" copy="Administrator vam še ni dodelil predmeta." /></>
   }
+  if (!rows) return <><PageHeader title="Oddaje" /><p className="note">Nalaganje …</p></>
 
-  const mine = new Set(mySubjects.map(s => s.id))
   const q = normalize(query)
-  const items = assignments
-    .filter(a => mine.has(a.subject))
-    .flatMap(a => submissionsFor(a, { students: store.students, submissions, profile }).filter(r => r.submitted))
-    .filter(r => (!subject || r.assignment.subject === subject) && normalize(`${r.who} ${r.assignment.title}`).includes(q))
-    .sort((x, y) => y.savedAt.localeCompare(x.savedAt))
+  const items = rows.filter(r => (!subject || r.subject === subject) && normalize(`${fullName(r.student)} ${r.assignmentTitle}`).includes(q))
   const pg = paginate(items, page)
+  const update = next => setRows(current => current.map(r => (r.id === next.id ? next : r)))
 
   return (
     <>
@@ -55,17 +58,19 @@ export default function TeacherSubmissions() {
                   <th scope="col">Naloga</th>
                   <th className="optional-column" scope="col">Predmet</th>
                   <th className="optional-column" scope="col">Oddano</th>
+                  <th scope="col">Ocena</th>
                   <th scope="col"><span className="sr-only">Prenos</span></th>
                 </tr>
               </thead>
               <tbody>
                 {pg.slice.map(r => (
-                  <tr key={r.key}>
-                    <td>{r.who}</td>
-                    <td>{r.assignment.title}</td>
-                    <td className="optional-column">{subjects.find(s => s.id === r.assignment.subject)?.name || ''}</td>
+                  <tr key={r.id}>
+                    <td>{fullName(r.student)}</td>
+                    <td>{r.assignmentTitle}</td>
+                    <td className="optional-column">{subjects.find(s => s.id === r.subject)?.name || ''}</td>
                     <td className="optional-column">{dateTime(r.savedAt)}</td>
-                    <td><SubmissionDownload row={r} /></td>
+                    <td><GradeSelect submission={r} who={fullName(r.student)} onChange={update} /></td>
+                    <td><SubmissionDownload submission={r} who={fullName(r.student)} /></td>
                   </tr>
                 ))}
               </tbody>

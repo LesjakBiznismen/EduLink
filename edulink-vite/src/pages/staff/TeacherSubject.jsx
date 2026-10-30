@@ -5,14 +5,13 @@ import Icon from '../../components/Icon.jsx'
 import MaterialDialog from '../../components/MaterialDialog.jsx'
 import SubmissionGroup from '../../components/SubmissionGroup.jsx'
 import { dateLabel, imgSrc, plural } from '../../lib/helpers.js'
-import { downloadMaterial } from '../../lib/materials.js'
 import { useApp } from '../../context/appContext.js'
 import { AssignmentCreateDialog, MaterialDeleteDialog, MaterialUploadDialog } from './TeacherDialogs.jsx'
 
 // Učitelj: stran predmeta z nalogami (oddajami) in gradivi.
 export default function TeacherSubject() {
   const { id } = useParams()
-  const { mySubjects, store, assignments, materials } = useApp()
+  const { mySubjects, assignments, materials, downloadMaterial } = useApp()
   const [dialog, setDialog] = useState(null) // {type: 'assignment' | 'upload' | 'delete' | 'view', id?}
   const subject = mySubjects.find(s => s.id === id)
 
@@ -22,7 +21,7 @@ export default function TeacherSubject() {
 
   if (!subject) return <EmptyState title="Predmeta ne poučujete" copy="Odprite enega od svojih predmetov." />
 
-  const students = store.students.filter(x => x.subjects.includes(id)).length
+  const students = subject.studentCount
   const list = assignments.filter(a => a.subject === id).sort((a, b) => a.due.localeCompare(b.due))
   const mats = materials.filter(m => m.subject === id)
   const close = () => setDialog(null)
