@@ -5,12 +5,11 @@ import MaterialDialog from '../components/MaterialDialog.jsx'
 import NoSubjects from '../components/NoSubjects.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { dateLabel, normalize } from '../lib/helpers.js'
-import { downloadMaterial } from '../lib/materials.js'
 import { useApp } from '../context/appContext.js'
 
 // Učenec: gradiva izbranih predmetov.
 export default function Materials() {
-  const { studentSubjects, subjects, materials, selected } = useApp()
+  const { studentSubjects, subjects, materials, selected, downloadMaterial } = useApp()
   const [query, setQuery] = useState('')
   const [subject, setSubject] = useState('')
   const [type, setType] = useState('')

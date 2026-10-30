@@ -1,10 +1,9 @@
 import Dialog from './Dialog.jsx'
 import Icon from './Icon.jsx'
-import { downloadMaterial } from '../lib/materials.js'
 import { useApp } from '../context/appContext.js'
 
 export default function MaterialDialog({ materialId, onClose }) {
-  const { materials, subjects } = useApp()
+  const { materials, subjects, downloadMaterial } = useApp()
   const material = materials.find(m => m.id === materialId)
   if (!material) return null
   const subjectName = subjects.find(s => s.id === material.subject)?.name || ''

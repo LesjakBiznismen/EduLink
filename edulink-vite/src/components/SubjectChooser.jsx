@@ -3,16 +3,19 @@ import Dialog from './Dialog.jsx'
 import { imgSrc } from '../lib/helpers.js'
 import { useApp } from '../context/appContext.js'
 
-// Učenec izbere predmete, ki jih obiskuje.
+// Učenec izbere predmete, ki jih obiskuje (vpisi v bazi).
 export default function SubjectChooser({ onClose }) {
   const { subjects, selected, saveSelection } = useApp()
   const [chosen, setChosen] = useState(selected)
   const [error, setError] = useState('')
 
   const toggle = id => setChosen(current => (current.includes(id) ? current.filter(x => x !== id) : [...current, id]))
-  const save = () => {
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
     if (!chosen.length) { setError('Izberite vsaj en predmet.'); return }
-    if (saveSelection(chosen)) onClose()
+    setBusy(true)
+    if (await saveSelection(chosen)) onClose()
+    else setBusy(false)
   }
 
   return (
@@ -23,7 +26,7 @@ export default function SubjectChooser({ onClose }) {
       actions={(
         <>
           <button className="ui-button" type="button" onClick={onClose}>Prekliči</button>
-          <button className="ui-button primary" type="button" onClick={save}>Shrani izbor</button>
+          <button className="ui-button primary" type="button" onClick={save} disabled={busy}>Shrani izbor</button>
         </>
       )}
     >

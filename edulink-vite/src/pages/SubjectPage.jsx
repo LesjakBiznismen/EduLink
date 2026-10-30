@@ -5,14 +5,13 @@ import AssignmentRow from '../components/AssignmentRow.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import Icon from '../components/Icon.jsx'
 import MaterialDialog from '../components/MaterialDialog.jsx'
-import { dateLabel, imgSrc } from '../lib/helpers.js'
-import { downloadMaterial } from '../lib/materials.js'
+import { dateLabel, fullName, imgSrc, initials } from '../lib/helpers.js'
 import { useApp } from '../context/appContext.js'
 
 // Učenec: stran predmeta z nalogami in gradivi.
 export default function SubjectPage() {
   const { id } = useParams()
-  const { subjects, assignments, materials, selected, saveSelection } = useApp()
+  const { subjects, assignments, materials, selected, saveSelection, downloadMaterial } = useApp()
   const [assignmentId, setAssignmentId] = useState(null)
   const [materialId, setMaterialId] = useState(null)
   const subject = subjects.find(s => s.id === id)
@@ -38,29 +37,33 @@ export default function SubjectPage() {
         <img src={imgSrc(subject)} alt="" />
         <div>
           <h1>{subject.name}</h1>
-          <div className="teacher-line">
-            <span className="avatar" aria-hidden="true">IP</span>
-            <span>Ime Priimek · učitelj</span>
-          </div>
+          {subject.teachers.map(t => (
+            <div className="teacher-line" key={t.id}>
+              <span className="avatar" aria-hidden="true">{initials(t)}</span>
+              <span>{fullName(t)} · učitelj</span>
+            </div>
+          ))}
         </div>
       </section>
       {!selected.includes(subject.id) && (
         <div className="banner">
-          <span>Ta predmet še ni na vašem seznamu.</span>
-          <button className="ui-button small primary" type="button" onClick={() => saveSelection([...selected, subject.id])}>Dodaj predmet</button>
+          <span>Niste vpisani v ta predmet. Po vpisu boste videli njegove naloge in gradiva.</span>
+          <button className="ui-button small primary" type="button" onClick={() => saveSelection([...selected, subject.id])}>Vpiši se</button>
         </div>
       )}
       <div className="subject-columns">
         <section className="subject-view" aria-labelledby="naloge-naslov">
           <div className="section-title"><h2 id="naloge-naslov">Naloge</h2></div>
-          <div className="list-surface">
-            {list.map(a => <AssignmentRow key={a.id} assignment={a} onOpen={setAssignmentId} />)}
-          </div>
-          <p className="note">Oddaje so shranjene samo v tem brskalniku.</p>
+          {list.length ? (
+            <div className="list-surface">
+              {list.map(a => <AssignmentRow key={a.id} assignment={a} onOpen={setAssignmentId} />)}
+            </div>
+          ) : <p className="note">Ni nalog.</p>}
         </section>
         <section aria-labelledby="gradiva-naslov">
           <div className="section-title"><h2 id="gradiva-naslov">Gradiva</h2></div>
-          <div className="list-surface">
+          {!files.length && <p className="note">Ni gradiv.</p>}
+          <div className="list-surface" hidden={!files.length}>
             {files.map(m => (
               <div className="file-row" key={m.id}>
                 <span className="file-symbol"><Icon name="file" /></span>

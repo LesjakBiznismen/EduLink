@@ -4,7 +4,9 @@ import { useApp } from '../context/appContext.js'
 
 export function AssignmentStatus({ assignment }) {
   const { submissions } = useApp()
-  if (submissions[assignment.id]) return <span className="badge done"><Icon name="tick" />Oddano</span>
+  const saved = submissions[assignment.id]
+  if (saved?.grade) return <span className="badge done"><Icon name="tick" />Ocena {saved.grade}</span>
+  if (saved) return <span className="badge done"><Icon name="tick" />Oddano</span>
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   return dateValue(assignment.due) < today
