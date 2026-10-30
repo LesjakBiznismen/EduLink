@@ -1,16 +1,55 @@
-# React + Vite
+# EduLink – odjemalec (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Spletna učilnica EduLink, narejena z Reactom 19 in Vitom. Aplikacija trenutno deluje brez strežnika in podatkovne baze: vzorčni podatki so v kodi, spremembe pa se hranijo samo v brskalniku (`localStorage`, `sessionStorage` in IndexedDB).
 
-Currently, two official plugins are available:
+## Zagon
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Aplikacija se odpre na <http://localhost:5173>.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Ukaz | Opis |
+|---|---|
+| `npm run dev` | razvojni strežnik na localhostu |
+| `npm run build` | produkcijska gradnja v mapo `dist/` |
+| `npm run preview` | lokalni predogled produkcijske gradnje |
+| `npm run lint` | preverjanje kode z ESLint |
 
-## Expanding the ESLint configuration
+## Vloge
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Prijava je brez gesla, izbere se vloga:
+
+- **Učenec** – izbere predmete, vidi naloge, gradiva in koledar, odda nalogo (datoteka ostane v brskalniku) in ureja profil. Lahko tudi ustvari nov profil (`/registracija`).
+- **Učitelj** – vidi svoje predmete, oddaje učencev, dodaja naloge ter nalaga in briše gradiva.
+- **Administrator** – dodaja, ureja in briše predmete, učitelje in učence.
+
+## Zemljevid strani
+
+| Pot | Stran |
+|---|---|
+| `/prijava`, `/registracija` | prijava in ustvarjanje profila |
+| `/predmeti`, `/predmeti/:id` | seznam predmetov in stran predmeta |
+| `/naloge` | naloge (učenec) oziroma oddaje (učitelj) |
+| `/gradiva` | gradiva |
+| `/koledar` | koledar rokov (učenec) |
+| `/profil` | profil (učenec, učitelj) |
+| `/ucitelji`, `/ucenci` | upravljanje oseb (administrator) |
+
+## Struktura
+
+```
+src/
+├── main.jsx, App.jsx         vstopna točka in poti (react-router-dom)
+├── context/                  stanje aplikacije (AppProvider, useApp)
+├── components/               skupne sestavine (Layout, Dialog, ...)
+├── pages/                    strani za učence, pages/staff za učitelje in administratorja
+├── data/                     vzorčni predmeti in začetni podatki
+├── lib/                      pomožne funkcije in dostop do shrambe brskalnika
+└── styles/style.css          skupni videz
+public/slike/                 logotip in slike predmetov
+```
+
+Podatke lahko ponastavite tako, da v orodjih brskalnika izbrišete shrambo spletnega mesta (`localhost:5173`).

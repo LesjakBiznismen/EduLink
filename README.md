@@ -17,9 +17,9 @@ EduLink/
 │   ├── edulink_initialize.SQL   ustvari bazo in tabele
 │   └── edulink_insert_test.SQL  testni podatki
 ├── backend/          strežniški del (Node.js)
-├── frontend/         odjemalec (React)
-├── edulink-vite/     predloga React + Vite za prihodnji odjemalec
-├── frontend-demo/    statični interaktivni prototip (HTML, CSS, JS)
+├── frontend/         rezervirano za prihodnji produkcijski odjemalec
+├── edulink-vite/     odjemalec: aplikacija React + Vite (deluje brez backenda)
+├── frontend-demo/    prvotni statični prototip (HTML, CSS, JS), ohranjen za primerjavo
 ├── nginx/            konfiguracija obratnega posrednika
 └── docker-compose.yml
 ```
@@ -62,26 +62,10 @@ docker-compose up
 
 Skrivnosti (gesla, ključi) hrani v datoteki `.env`, ki ni v repozitoriju.
 
-## Prototip
 
-Interaktivni prototip je v mapi `frontend-demo/` in je narejen samo s HTML, CSS in JavaScriptom, zato ne potrebuje strežnika ali orodij za gradnjo. Odpri `index.html` v brskalniku ali mapo postrezi lokalno:
+## Odjemalec (React + Vite)
 
-```bash
-python -m http.server 5188 --directory frontend-demo
-```
-
-Prototip vsebuje:
-
-- **Prijavo in registracijo** (`index.html`, `register.html`) z izbiro vloge: učenec, učitelj ali administrator
-- **Strani za učence**: predmeti (`domov.html`, `predmet.html`), naloge (`naloge.html`), gradiva (`gradiva.html`), koledar (`koledar.html`) in profil (`profil.html`)
-- **Strani za osebje**: seznama učencev (`ucenci.html`) in učiteljev (`ucitelji.html`) ter upravljanje predmetov za učitelje in administratorja
-- Slike predmetov v `slike/predmeti/`
-
-Podatki so vzorčni (`data.js`, `store.js`) in se hranijo samo v brskalniku (`localStorage` in `sessionStorage`), nič se ne pošilja na strežnik. Skupen videz določa `style.css`, logika pa je v `app.js`, `staff.js`, `predmet.js` in `script.js`.
-
-## Odjemalec React + Vite
-
-Mapa `edulink-vite/` vsebuje predlogo, ustvarjeno z `npm create vite@latest` (React 19, Vite, ESLint). Zagon:
+Celotna aplikacija je v mapi `edulink-vite/` in je narejena z Reactom 19 in Vitom. Za zdaj deluje brez backenda in podatkovne baze: vzorčni podatki so v kodi, spremembe pa se hranijo samo v brskalniku. Zagon na localhostu:
 
 ```bash
 cd edulink-vite
@@ -89,4 +73,20 @@ npm install
 npm run dev
 ```
 
-Drugi ukazi: `npm run build` (produkcijska gradnja), `npm run lint` (preverjanje kode) in `npm run preview` (predogled gradnje).
+Aplikacija se odpre na <http://localhost:5173>. Drugi ukazi: `npm run build` (produkcijska gradnja), `npm run preview` (predogled gradnje) in `npm run lint` (preverjanje kode).
+
+Prijava je brez gesla, izbere se vloga:
+
+- **Učenec**: izbira predmetov, naloge z oddajo datotek, gradiva, koledar rokov in profil
+- **Učitelj**: svoji predmeti, pregled oddaj, dodajanje nalog ter nalaganje in brisanje gradiv
+- **Administrator**: upravljanje predmetov, učiteljev in učencev
+
+Podrobnosti o strukturi kode in poteh so v [edulink-vite/README.md](edulink-vite/README.md).
+
+## Prvotni prototip
+
+Mapa `frontend-demo/` vsebuje prvotni statični prototip (HTML, CSS in JavaScript brez orodij za gradnjo), ki je ohranjen za primerjavo. Odpri `index.html` v brskalniku ali ga postrezi lokalno:
+
+```bash
+python -m http.server 5188 --directory frontend-demo
+```
