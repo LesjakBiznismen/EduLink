@@ -10,6 +10,7 @@ import auth from './routes/auth.js'
 import calendar from './routes/calendar.js'
 import enrollments from './routes/enrollments.js'
 import materials from './routes/materials.js'
+import profile from './routes/profile.js'
 import subjects from './routes/subjects.js'
 import submissions from './routes/submissions.js'
 
@@ -30,6 +31,7 @@ app.use('/api/assignments', authenticate, assignments)
 app.use('/api/submissions', authenticate, submissions)
 app.use('/api/materials', authenticate, materials)
 app.use('/api/calendar', authenticate, calendar)
+app.use('/api/profile', authenticate, profile)
 
 app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Pot API ne obstaja.')))
 
