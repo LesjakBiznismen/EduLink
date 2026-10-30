@@ -13,6 +13,7 @@ import materials from './routes/materials.js'
 import profile from './routes/profile.js'
 import subjects from './routes/subjects.js'
 import submissions from './routes/submissions.js'
+import users from './routes/users.js'
 
 export const app = express()
 
@@ -32,6 +33,7 @@ app.use('/api/submissions', authenticate, submissions)
 app.use('/api/materials', authenticate, materials)
 app.use('/api/calendar', authenticate, calendar)
 app.use('/api/profile', authenticate, profile)
+app.use('/api/users', authenticate, requireRole('admin'), users)
 
 app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Pot API ne obstaja.')))
 
