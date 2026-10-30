@@ -8,7 +8,8 @@
 
 ## Zagon
 
-Z orodjem [`sqlite3`](https://sqlite.org/download.html) (najprej shema, nato podatki):
+Strežnik v mapi `backend/` bazo `edulink.db` ob prvem zagonu ustvari sam (najprej `schema.sql`, nato
+`insert.sql`); `npm run db:reset` jo ustvari znova. Ročno lahko bazo ustvarite z orodjem [`sqlite3`](https://sqlite.org/download.html) (najprej shema, nato podatki):
 
 ```bash
 cd PB
@@ -37,7 +38,7 @@ Vsi imajo testno geslo `edulink123` (shranjeno kot PBKDF2-SHA256 hash).
 
 ## Shema
 
-- `sole`, `uporabniki` (vloga `ucenec` / `ucitelj` / `admin`)
+- `sole`, `uporabniki` (vloga `ucenec` / `ucitelj` / `admin`; `telefon`, `naziv` in `kabinet` za profil učitelja)
 - `predmeti`, `ucitelji_predmeti` (kdo poučuje), `vpisi` (kdo obiskuje)
 - `gradiva` (besedilo ali naložena datoteka; mehko brisanje z `izbrisano_ob`)
 - `naloge`, `oddaje` (ena oddaja na učenca in nalogo, ocena in povratna informacija)

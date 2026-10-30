@@ -1,9 +1,13 @@
 .git
 .claude
-.env
+**/.env
 **/node_modules
 **/dist
 **/*.log
+backend/uploads
 PB/*.db
+PB/*.db-journal
+PB/*.db-wal
+PB/*.db-shm
 frontend
 frontend-demo
