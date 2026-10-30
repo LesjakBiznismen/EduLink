@@ -1,15 +1,22 @@
 {
   "name": "edulink-backend",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.1.0",
+  "description": "EduLink – strežnik REST API (Node.js, Express, SQLite)",
   "type": "module",
-  "scripts": {
-    "start": "node src/server.js"
-  },
+  "main": "src/server.js",
   "engines": {
     "node": ">=22.13"
   },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --env-file-if-exists=.env --watch src/server.js",
+    "db:reset": "node --env-file-if-exists=.env src/scripts/reset-db.js",
+    "test": "node --test test/"
+  },
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2"
   }
 }
