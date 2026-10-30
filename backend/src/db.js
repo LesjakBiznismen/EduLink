@@ -11,7 +11,7 @@ const MIGRATIONS = [
 ]
 
 // Novo bazo napolni s shemo in testnimi podatki iz mape PB/.
-export function initialize(db, { seed = true } = {}) {
+export function initialize(db, { seed = config.seed } = {}) {
   db.exec(fs.readFileSync(config.schemaPath, 'utf8'))
   if (seed) db.exec(fs.readFileSync(config.seedPath, 'utf8'))
 }

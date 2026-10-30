@@ -13,8 +13,10 @@ if (isProduction && !process.env.JWT_SECRET) {
 export const config = {
   port: Number(process.env.PORT) || 3000,
   dbPath: resolve(process.env.DB_PATH || '../PB/edulink.db'),
-  schemaPath: resolve(process.env.SCHEMA_PATH || '../PB/schema.sql'),
-  seedPath: resolve(process.env.SEED_PATH || '../PB/insert.sql'),
+  // SQL_DIR je mapa s schema.sql in insert.sql (v Dockerju /app/sql); SEED=false ustvari prazno bazo.
+  schemaPath: resolve(process.env.SCHEMA_PATH || path.join(process.env.SQL_DIR || '../PB', 'schema.sql')),
+  seedPath: resolve(process.env.SEED_PATH || path.join(process.env.SQL_DIR || '../PB', 'insert.sql')),
+  seed: process.env.SEED !== 'false',
   uploadDir: resolve(process.env.UPLOAD_DIR || './uploads'),
   staticDir: resolve(process.env.STATIC_DIR || '../edulink-vite/dist'),
   jwtSecret: process.env.JWT_SECRET || 'edulink-razvojna-skrivnost',

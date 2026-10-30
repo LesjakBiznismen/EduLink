@@ -1,4 +1,4 @@
-# EduLink backend (Node.js + SQLite). Gradi se iz korena repozitorija,
+# EduLink backend (Node.js + Express + SQLite). Gradi se iz korena repozitorija,
 # ker potrebuje tudi SQL datoteke iz mape PB/:
 #   docker build -f backend/Dockerfile .
 FROM node:24-alpine
@@ -7,10 +7,11 @@ WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
     DB_PATH=/data/edulink.db \
+    UPLOAD_DIR=/data/uploads \
     SQL_DIR=/app/sql
 
-COPY backend/package.json ./
-RUN npm install --omit=dev && npm cache clean --force
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
 COPY backend/src ./src
 COPY PB/schema.sql PB/insert.sql ./sql/
