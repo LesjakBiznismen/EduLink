@@ -1,0 +1,2 @@
+# Lupinske skripte morajo imeti konce vrstic LF, sicer v Linux vsebniku ne delujejo.
+*.sh text eol=lf

@@ -106,10 +106,22 @@ export default function AdminPeople({ kind }) {
     await reloadSubjects()
   }, [info.role, reloadSubjects])
 
-  useEffect(() => {
-    api.get(`/users?role=${info.role}`).then(setPeople).catch(err => toast(err.message))
-  }, [info.role, toast])
+  const [loadError, setLoadError] = useState('')
+  const [attempt, setAttempt] = useState(0)
 
+  useEffect(() => {
+    api.get(`/users?role=${info.role}`).then(setPeople).catch(err => { toast(err.message); setLoadError(err.message) })
+  }, [info.role, toast, attempt])
+
+  if (loadError && !people) {
+    return (
+      <>
+        <PageHeader title={info.title} />
+        <p className="form-error" role="alert">{loadError}</p>
+        <button className="ui-button small" type="button" onClick={() => { setLoadError(''); setAttempt(n => n + 1) }}>Poskusi znova</button>
+      </>
+    )
+  }
   if (!people) return <><PageHeader title={info.title} /><p className="note">Nalaganje …</p></>
 
   const q = normalize(query)

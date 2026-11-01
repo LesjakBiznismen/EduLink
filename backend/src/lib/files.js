@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { config } from '../config.js'
@@ -12,7 +13,7 @@ export const materialKind = name => KINDS[extensionOf(name)] ?? null
 // eslint-disable-next-line no-control-regex
 export const safeFilename = value => value.replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/[. ]+$/g, '').slice(0, 150)
 
-// Pot v bazi (npr. /uploads/oddaje/3/22.pdf) pretvori v pot na disku znotraj UPLOAD_DIR.
+// Pot v bazi (npr. /uploads/oddaje/3/Novak Jan – Naloga.pdf) pretvori v pot na disku znotraj UPLOAD_DIR.
 function diskPath(url) {
   const relative = String(url).replace(/^\/?uploads\//, '')
   const full = path.resolve(config.uploadDir, relative)
@@ -26,6 +27,21 @@ export function saveFile(parts, buffer) {
   fs.mkdirSync(path.dirname(full), { recursive: true })
   fs.writeFileSync(full, buffer)
   return url
+}
+
+// Datoteko najprej zapiše v začasno datoteko. Ko je zapis v bazi uspel, commit() prepiše ciljno
+// datoteko; ob napaki discard() zavrže začasno, stara datoteka pa ostane nedotaknjena.
+export function stageFile(parts, buffer) {
+  const url = `/uploads/${parts.join('/')}`
+  const full = diskPath(url)
+  fs.mkdirSync(path.dirname(full), { recursive: true })
+  const temp = `${full}.${crypto.randomUUID()}.tmp`
+  fs.writeFileSync(temp, buffer)
+  return {
+    url,
+    commit: () => fs.renameSync(temp, full),
+    discard: () => fs.rmSync(temp, { force: true }),
+  }
 }
 
 export function removeFile(url) {

@@ -2,7 +2,7 @@
 
 Spletna učilnica EduLink, narejena z Reactom 19 in Vitom. Vsi podatki (uporabniki, predmeti, naloge, oddaje,
 gradiva, koledar) se berejo in shranjujejo prek strežnika v mapi [`backend/`](../backend/README.md), ki jih hrani
-v SQLite bazi.
+v bazi PostgreSQL.
 
 ## Zagon
 

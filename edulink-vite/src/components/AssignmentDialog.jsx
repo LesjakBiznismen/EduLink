@@ -12,6 +12,7 @@ export default function AssignmentDialog({ assignmentId, onClose }) {
   const saved = submissions[assignmentId]
   const [error, setError] = useState('')
   const [confirming, setConfirming] = useState(false)
+  const [serverHasSubmission, setServerHasSubmission] = useState(false)
   const [busy, setBusy] = useState(false)
   if (!assignment) return null
   const subject = subjects.find(s => s.id === assignment.subject)
@@ -21,14 +22,18 @@ export default function AssignmentDialog({ assignmentId, onClose }) {
     const file = e.currentTarget.elements.file.files[0]
     if (!file) return
     if (file.size > MAX_FILE_SIZE) { setError('Datoteka je prevelika. Izberite datoteko do 20 MB.'); return }
-    if (saved && e.nativeEvent.submitter?.value !== 'yes') { setConfirming(true); return }
+    const replacing = Boolean(saved) || serverHasSubmission
+    if (replacing && e.nativeEvent.submitter?.value !== 'yes') { setConfirming(true); return }
     setBusy(true)
     try {
-      await saveSubmission(assignmentId, file)
+      // Do tu pridemo z zamenjavo samo, če je učenec v potrditvenem koraku izbral »Da«.
+      await saveSubmission(assignmentId, file, replacing)
       onClose()
       toast('Naloga je oddana.')
     } catch (err) {
-      setError(err.message)
+      // Oddaja je medtem nastala drugje (npr. v drugem zavihku): pokažemo potrditev zamenjave.
+      if (err.code === 'EXISTS') { setServerHasSubmission(true); setConfirming(true) }
+      else setError(err.message)
       setBusy(false)
     }
   }
@@ -61,7 +66,7 @@ export default function AssignmentDialog({ assignmentId, onClose }) {
           <input type="file" name="file" required aria-describedby="file-help" onChange={onFileChange} />
         </label>
         <p className="note" id="file-help">
-          Največ 20 MB. Datoteka se shrani na strežnik in jo prejme učitelj. Ime bo »Priimek Ime -- Naslov naloge.ext«.
+          Največ 20 MB. Datoteka se shrani na strežnik in jo prejme učitelj. Ime bo »Priimek Ime – Naslov naloge.ext«.
         </p>
         <p className="form-error" role="alert">{error}</p>
         {confirming && (

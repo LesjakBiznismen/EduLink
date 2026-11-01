@@ -101,10 +101,11 @@ export function AppProvider({ children }) {
     }
   }, [reloadAssignments, reloadMaterials, reloadSubjects, toast])
 
-  const saveSubmission = useCallback(async (assignmentId, file) => {
+  // replace = učenec je potrdil zamenjavo obstoječe oddaje (strežnik brez potrditve vrne 409).
+  const saveSubmission = useCallback(async (assignmentId, file, replace = false) => {
     const form = new FormData()
     form.append('file', file)
-    const submission = await api.upload(`/assignments/${assignmentId}/submission`, form)
+    const submission = await api.upload(`/assignments/${assignmentId}/submission${replace ? '?confirm=1' : ''}`, form)
     setAssignments(current => current.map(a => (a.id === assignmentId ? { ...a, submission } : a)))
     return submission
   }, [])

@@ -1,33 +1,107 @@
-# EduLink: celoten sistem v Dockerju.
-#   docker compose up --build    -> aplikacija na http://localhost:8080
-#   docker compose down -v       -> ustavi in izbriše bazo (ob naslednjem zagonu se ustvari znova)
+# EduLink: celoten sistem v Dockerju (nginx + Node.js API + PostgreSQL, vsak v svojem vsebniku).
+#   docker compose up --build    -> aplikacija na https://localhost:8443 (http://localhost:8080 preusmeri nanjo)
+#   docker compose down -v       -> ustavi in izbriše bazo, naložene datoteke in certifikat (ob naslednjem zagonu se ustvarijo znova)
+#   docker compose --profile tools up -d adminer   -> spletno orodje za upravljanje baze na http://localhost:8081
 name: edulink
 
 services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-edulink}
+      POSTGRES_USER: ${POSTGRES_USER:-edulink}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Nastavite POSTGRES_PASSWORD v datoteki .env}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      # Samo za lokalni razvoj (npm run dev); iz omrežja baza ni dosegljiva.
+      # Vrata 5433 (ne 5432), da se ne trkajo z morebitnim lokalno nameščenim PostgreSQL.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - edulink-net
+    restart: unless-stopped
+
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
     environment:
-      DB_PATH: /data/edulink.db
+      DATABASE_URL: postgres://${POSTGRES_USER:-edulink}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-edulink}
       UPLOAD_DIR: /data/uploads
       JWT_SECRET: ${JWT_SECRET:?Nastavite JWT_SECRET v datoteki .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       SEED: ${SEED:-true}
     volumes:
-      - db-data:/data
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - edulink-net
     restart: unless-stopped
 
   frontend:
     build:
       context: .
       dockerfile: edulink-vite/Dockerfile
+    environment:
+      # Zunanja vrata HTTPS (nginx preusmeri http -> https:<HTTPS_PORT>).
+      HTTPS_PORT: ${HTTPS_PORT:-8443}
+      # Samopodpisan certifikat za razvoj se ustvari sam; za Let's Encrypt glej docs/namestitev.md.
+      SSL_CERT: ${SSL_CERT:-/etc/nginx/certs/fullchain.pem}
+      SSL_KEY: ${SSL_KEY:-/etc/nginx/certs/privkey.pem}
+      # Dodatna imena in naslovi v samopodpisanem certifikatu, npr. "DNS:edulink,IP:192.168.1.10".
+      CERT_SAN: ${CERT_SAN:-}
     ports:
       - "${FRONTEND_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    volumes:
+      - certs:/etc/nginx/certs
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - edulink-net
     restart: unless-stopped
 
+  # Neobvezno: pridobitev certifikata Let's Encrypt za javno domeno (docs/namestitev.md).
+  certbot:
+    image: certbot/certbot:v3.0.0
+    profiles: ["letsencrypt"]
+    entrypoint: ["certbot"]
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    networks:
+      - edulink-net
+
+  # Neobvezno orodje za administracijo baze (samo na tem računalniku).
+  adminer:
+    image: adminer:4
+    profiles: ["tools"]
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - edulink-net
+
+networks:
+  edulink-net:
+
 volumes:
-  db-data:
+  pg-data:
+  uploads:
+  certs:
+  letsencrypt:
+  certbot-www:

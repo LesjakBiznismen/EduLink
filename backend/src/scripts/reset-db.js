@@ -1,12 +1,11 @@
 import fs from 'node:fs'
 import { config } from '../config.js'
+import { db, pool, reset } from '../db.js'
 
-// Izbriše bazo in naložene datoteke; ob naslednjem zagonu se baza ustvari znova iz PB/.
-for (const file of [config.dbPath, `${config.dbPath}-journal`, `${config.dbPath}-wal`, `${config.dbPath}-shm`]) {
-  fs.rmSync(file, { force: true })
-}
+// Izbriše tabele in naložene datoteke; baza se ustvari znova iz PB/schema.sql (in PB/insert.sql).
 fs.rmSync(config.uploadDir, { recursive: true, force: true })
+await reset()
 
-const { db } = await import('../db.js')
-const count = db.prepare('SELECT count(*) AS n FROM uporabniki').get().n
-console.log(`Baza ${config.dbPath} je ponastavljena (${count} uporabnikov).`)
+const { n } = await db.get('SELECT count(*) AS n FROM uporabniki')
+console.log(`Baza je ponastavljena (${n} uporabnikov).`)
+await pool.end()

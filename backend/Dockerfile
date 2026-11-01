@@ -1,12 +1,11 @@
-# EduLink backend (Node.js + Express + SQLite). Gradi se iz korena repozitorija,
-# ker potrebuje tudi SQL datoteke iz mape PB/:
+# EduLink backend (Node.js + Express). Podatke hrani PostgreSQL v svojem vsebniku (DATABASE_URL).
+# Gradi se iz korena repozitorija, ker potrebuje tudi SQL datoteke iz mape PB/:
 #   docker build -f backend/Dockerfile .
 FROM node:24-alpine
 
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
-    DB_PATH=/data/edulink.db \
     UPLOAD_DIR=/data/uploads \
     SQL_DIR=/app/sql
 
@@ -16,7 +15,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY backend/src ./src
 COPY PB/schema.sql PB/insert.sql ./sql/
 
-RUN mkdir -p /data && chown node:node /data
+# Mapa za naložene datoteke mora obstajati v sliki in pripadati uporabniku node; sicer jo Docker ob
+# priklopu volumna (uploads:/data/uploads) ustvari kot root in backend vanjo ne more pisati.
+RUN mkdir -p /data/uploads && chown -R node:node /data
 USER node
 VOLUME /data
 EXPOSE 3000

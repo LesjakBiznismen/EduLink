@@ -12,13 +12,13 @@ const router = Router()
 const MATERIAL_SQL = 'SELECT g.*, p.koda FROM gradiva g JOIN predmeti p USING (id_predmet)'
 const TYPES = ['Zapiski', 'Vaje']
 
-function materialById(value) {
-  const row = db.prepare(`${MATERIAL_SQL} WHERE g.id_gradivo = ? AND g.izbrisano_ob IS NULL`).get(id(value))
+async function materialById(value) {
+  const row = await db.get(`${MATERIAL_SQL} WHERE g.id_gradivo = ? AND g.izbrisano_ob IS NULL`, [id(value)])
   if (!row) throw notFound('Gradivo ni najdeno.')
   return row
 }
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const visible = visibleSubjectsSql(req.user)
   const params = [...visible.params]
   let where = `WHERE g.izbrisano_ob IS NULL AND g.id_predmet IN (${visible.sql})`
@@ -26,13 +26,13 @@ router.get('/', (req, res) => {
     where += ' AND p.koda = ?'
     params.push(String(req.query.subject))
   }
-  res.json(db.prepare(`${MATERIAL_SQL} ${where} ORDER BY g.dodano_ob DESC, g.id_gradivo DESC`).all(...params).map(toMaterial))
+  res.json((await db.all(`${MATERIAL_SQL} ${where} ORDER BY g.dodano_ob DESC, g.id_gradivo DESC`, params)).map(toMaterial))
 })
 
 // Učitelj naloži gradivo (multipart: subject, type, title, file) ali doda besedilno gradivo (content).
-router.post('/', requireRole('ucitelj', 'admin'), singleFile('file'), (req, res) => {
-  const subject = subjectByCode(req.body?.subject)
-  assertTeaches(req.user, subject.id_predmet)
+router.post('/', requireRole('ucitelj', 'admin'), singleFile('file'), async (req, res) => {
+  const subject = await subjectByCode(req.body?.subject)
+  await assertTeaches(req.user, subject.id_predmet)
   const type = String(req.body?.type || 'Zapiski')
   if (!TYPES.includes(type)) throw badRequest('Vrsta gradiva mora biti Zapiski ali Vaje.')
   const file = req.file?.size ? req.file : null
@@ -49,29 +49,31 @@ router.post('/', requireRole('ucitelj', 'admin'), singleFile('file'), (req, res)
   }
   if (!title) throw badRequest('Vnesite naslov gradiva.')
 
-  const { lastInsertRowid } = db.prepare('INSERT INTO gradiva (id_predmet, nalozil, naslov, vrsta, vsebina) VALUES (?, ?, ?, ?, ?)')
-    .run(subject.id_predmet, req.user.id, title, type, content)
-  const materialId = Number(lastInsertRowid)
+  const created = await db.get(
+    'INSERT INTO gradiva (id_predmet, nalozil, naslov, vrsta, vsebina) VALUES (?, ?, ?, ?, ?) RETURNING id_gradivo',
+    [subject.id_predmet, req.user.id, title, type, content],
+  )
+  const materialId = created.id_gradivo
   if (file) {
     const url = saveFile(['gradiva', subject.id_predmet, `${materialId}.${extensionOf(file.originalname)}`], file.buffer)
-    db.prepare('UPDATE gradiva SET datoteka_ime = ?, datoteka_url = ?, tip_datoteke = ?, velikost_bajtov = ? WHERE id_gradivo = ?')
-      .run(file.originalname.slice(0, 255), url, kind, file.size, materialId)
+    await db.run('UPDATE gradiva SET datoteka_ime = ?, datoteka_url = ?, tip_datoteke = ?, velikost_bajtov = ? WHERE id_gradivo = ?',
+      [file.originalname.slice(0, 255), url, kind, file.size, materialId])
   }
-  res.status(201).json(toMaterial(materialById(materialId)))
+  res.status(201).json(toMaterial(await materialById(materialId)))
 })
 
-router.get('/:id/file', (req, res) => {
-  const row = materialById(req.params.id)
-  if (!canView(req.user, row.id_predmet)) throw forbidden()
+router.get('/:id/file', async (req, res) => {
+  const row = await materialById(req.params.id)
+  if (!(await canView(req.user, row.id_predmet))) throw forbidden()
   if (!row.datoteka_url) throw notFound('Gradivo nima priložene datoteke.')
   sendFile(res, row.datoteka_url, row.datoteka_ime)
 })
 
 // Mehki izbris: gradivo ostane v bazi z oznako izbrisano_ob.
-router.delete('/:id', requireRole('ucitelj', 'admin'), (req, res) => {
-  const row = materialById(req.params.id)
-  assertTeaches(req.user, row.id_predmet)
-  db.prepare("UPDATE gradiva SET izbrisano_ob = datetime('now') WHERE id_gradivo = ?").run(row.id_gradivo)
+router.delete('/:id', requireRole('ucitelj', 'admin'), async (req, res) => {
+  const row = await materialById(req.params.id)
+  await assertTeaches(req.user, row.id_predmet)
+  await db.run("UPDATE gradiva SET izbrisano_ob = NOW() AT TIME ZONE 'UTC' WHERE id_gradivo = ?", [row.id_gradivo])
   res.status(204).end()
 })
 

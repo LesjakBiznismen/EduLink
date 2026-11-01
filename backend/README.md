@@ -1,17 +1,19 @@
 # EduLink – strežnik (Node.js + Express)
 
-REST API, ki povezuje odjemalca `edulink-vite/` s SQLite bazo iz mape `PB/`. Baza se odpre z vgrajenim
-modulom `node:sqlite` (brez nativnih odvisnosti), zato je potreben **Node.js 22.13 ali novejši**.
+REST API, ki povezuje odjemalca `edulink-vite/` s podatkovno bazo PostgreSQL (shema in podatki v mapi `PB/`).
+Baza teče v svojem Docker vsebniku; strežnik se nanjo povezuje z gonilnikom `pg`. Potreben je **Node.js 22.13 ali novejši**.
 
 ## Zagon
 
 ```bash
+docker compose up -d db      # v korenu repozitorija: zažene samo bazo (vrata 127.0.0.1:5433)
 cd backend
+cp .env.example .env         # nastavite JWT_SECRET in geslo v DATABASE_URL (enako kot POSTGRES_PASSWORD)
 npm install
 npm run dev
 ```
 
-Strežnik posluša na <http://localhost:3000>. Če baza `PB/edulink.db` še ne obstaja, jo ob zagonu ustvari iz
+Strežnik posluša na <http://localhost:3000>. Če tabele v bazi še ne obstajajo, jih ob zagonu ustvari iz
 `PB/schema.sql` in napolni s testnimi podatki iz `PB/insert.sql`. Odjemalec (`npm run dev` v `edulink-vite/`)
 zahteve `/api` samodejno posreduje na ta strežnik.
 
@@ -19,11 +21,12 @@ zahteve `/api` samodejno posreduje na ta strežnik.
 |---|---|
 | `npm run dev` | zagon s samodejnim ponovnim zagonom ob spremembah |
 | `npm start` | običajen zagon |
-| `npm run db:reset` | izbriše bazo in naložene datoteke ter bazo ustvari znova |
-| `npm test` | integracijski testi API (vsak zagon dobi svojo začasno bazo) |
+| `npm run db:reset` | izbriše tabele in naložene datoteke ter bazo ustvari znova |
+| `npm test` | integracijski testi API; potrebujejo zagnano bazo, vsak zagon dobi svojo shemo, ki se po testih izbriše |
 
-Nastavitve so v `.env` (glej `.env.example`): `PORT`, `DB_PATH`, `UPLOAD_DIR`, `JWT_SECRET`, `JWT_EXPIRES_IN`.
+Nastavitve so v `.env` (glej `.env.example`): `PORT`, `DATABASE_URL`, `UPLOAD_DIR`, `JWT_SECRET` (obvezna), `JWT_EXPIRES_IN`.
 Z `SQL_DIR` določite mapo s `schema.sql` in `insert.sql`, s `SEED=false` pa se nova baza ustvari brez testnih podatkov.
+`DB_SCHEMA` (neobvezno) izbere shemo v bazi; uporabljajo ga testi.
 
 ## Prijava
 
@@ -48,7 +51,7 @@ Predmet je v API določen s kodo (npr. `matematika`).
 | `GET /api/assignments` | prijavljeni | naloge vidnih predmetov; učenec dobi tudi svojo oddajo in oceno |
 | `POST /api/assignments`, `PUT/DELETE /api/assignments/:id` | učitelj predmeta | upravljanje nalog |
 | `GET /api/assignments/:id/submissions` | učitelj predmeta | vsi vpisani učenci in njihove oddaje |
-| `POST /api/assignments/:id/submission` | učenec | oddaja ali zamenjava oddaje (multipart `file`) |
+| `POST /api/assignments/:id/submission` | učenec | oddaja (multipart `file`); datoteka se shrani kot »Priimek Ime – Naslov naloge.končnica«. Če oddaja že obstaja, strežnik vrne `409` s kodo `EXISTS` in jo zamenja šele ob `?confirm=1` (po potrditvi učenca) |
 | `GET /api/submissions` | učitelj, učenec | oddaje pri učiteljevih predmetih oziroma lastne oddaje |
 | `GET /api/submissions/:id/file` | lastnik, učitelj | prenos oddane datoteke |
 | `PATCH /api/submissions/:id/grade` | učitelj predmeta | ocena 1–5 in povratna informacija |

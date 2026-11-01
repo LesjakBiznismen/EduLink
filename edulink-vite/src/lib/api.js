@@ -14,9 +14,10 @@ export const setToken = token => {
 }
 
 export class ApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, code) {
     super(message)
     this.status = status
+    this.code = code
   }
 }
 
@@ -37,7 +38,7 @@ async function request(path, { method = 'GET', body, form, raw = false } = {}) {
   if (res.status === 401 && token) onUnauthorized()
   if (!res.ok) {
     const data = await res.json().catch(() => null)
-    throw new ApiError(res.status, data?.error || `Zahteva ni uspela (${res.status}).`)
+    throw new ApiError(res.status, data?.error || `Zahteva ni uspela (${res.status}).`, data?.code)
   }
   if (raw) return res
   if (res.status === 204) return null

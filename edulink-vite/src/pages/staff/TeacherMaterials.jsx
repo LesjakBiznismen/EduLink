@@ -3,7 +3,6 @@ import EmptyState from '../../components/EmptyState.jsx'
 import Icon from '../../components/Icon.jsx'
 import MaterialDialog from '../../components/MaterialDialog.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
-import { dateLabel } from '../../lib/helpers.js'
 import { useApp } from '../../context/appContext.js'
 import { MaterialDeleteDialog, MaterialUploadDialog } from './TeacherDialogs.jsx'
 
@@ -43,7 +42,6 @@ export default function TeacherMaterials() {
                 <th scope="col">Ime gradiva</th>
                 <th className="optional-column" scope="col">Predmet</th>
                 <th className="optional-column" scope="col">Vrsta</th>
-                <th className="optional-column" scope="col">Dodano</th>
                 <th scope="col"><span className="sr-only">Dejanja</span></th>
               </tr>
             </thead>
@@ -58,7 +56,6 @@ export default function TeacherMaterials() {
                   </td>
                   <td className="optional-column">{nameOf(m.subject)}</td>
                   <td className="optional-column"><span className="badge">{m.type}</span></td>
-                  <td className="optional-column">{dateLabel(m.added)}</td>
                   <td>
                     <div className="row-actions">
                       <button className="icon-button" type="button" onClick={() => downloadMaterial(m, nameOf(m.subject))} aria-label={`Prenesi ${m.title}`}><Icon name="down" /></button>

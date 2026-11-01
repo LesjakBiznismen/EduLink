@@ -5,7 +5,7 @@ import AssignmentRow from '../components/AssignmentRow.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import Icon from '../components/Icon.jsx'
 import MaterialDialog from '../components/MaterialDialog.jsx'
-import { dateLabel, fullName, imgSrc, initials } from '../lib/helpers.js'
+import { fullName, imgSrc, initials } from '../lib/helpers.js'
 import { useApp } from '../context/appContext.js'
 
 // Učenec: stran predmeta z nalogami in gradivi.
@@ -68,7 +68,7 @@ export default function SubjectPage() {
               <div className="file-row" key={m.id}>
                 <span className="file-symbol"><Icon name="file" /></span>
                 <button className="file-title" type="button" onClick={() => setMaterialId(m.id)}>
-                  {m.title}<span className="file-subject">{m.type} · {dateLabel(m.added)}</span>
+                  {m.title}<span className="file-subject">{m.type}</span>
                 </button>
                 <button className="icon-button" type="button" onClick={() => downloadMaterial(m, subject.name)} aria-label={`Prenesi ${m.title}`}>
                   <Icon name="down" />
