@@ -1,0 +1,64 @@
+# Obrnjeni posrednik: HTTPS postreže zgrajeno React aplikacijo in posreduje /api backendu,
+# HTTP samo preusmeri na HTTPS. Nginx slika ob zagonu nadomesti ${...} z okoljskimi spremenljivkami
+# (SSL_CERT, SSL_KEY, HTTPS_PORT); nginx spremenljivke ($host, $uri ...) ostanejo nespremenjene.
+
+server {
+    listen 80;
+    server_name _;
+
+    # Preverjanje domene za Let's Encrypt (Certbot, webroot); vse ostalo gre na HTTPS.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host:${HTTPS_PORT}$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name _;
+
+    ssl_certificate ${SSL_CERT};
+    ssl_certificate_key ${SSL_KEY};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "same-origin" always;
+    # Ko aplikacija teče na javni domeni z veljavnim certifikatom, odkomentirajte:
+    # add_header Strict-Transport-Security "max-age=31536000" always;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Gradiva in oddaje so lahko velike do 20 MB (+ režija multipart).
+    client_max_body_size 25m;
+
+    location /api/ {
+        proxy_pass http://backend:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Zgrajene datoteke imajo hash v imenu, zato jih lahko brskalnik dolgo hrani.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header X-Content-Type-Options "nosniff" always;
+        try_files $uri =404;
+    }
+
+    # BrowserRouter: vse ostale poti vrnejo index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

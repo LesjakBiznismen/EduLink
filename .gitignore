@@ -25,7 +25,14 @@ pnpm-debug.log*
 # Datoteke, ki jih naložijo učitelji in učenci (backend)
 backend/uploads/
 
-# SQLite baza, ustvarjena iz PB/schema.sql in PB/insert.sql
+# Varnostne kopije baze in datotek (scripts/backup.sh) ter certifikati
+backups/
+certs/
+*.pem
+*.key
+*.crt
+
+# Stare lokalne SQLite baze (aplikacija zdaj uporablja PostgreSQL)
 PB/*.db
 PB/*.db-journal
 PB/*.db-wal
