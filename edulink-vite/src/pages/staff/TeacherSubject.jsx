@@ -4,7 +4,7 @@ import EmptyState from '../../components/EmptyState.jsx'
 import Icon from '../../components/Icon.jsx'
 import MaterialDialog from '../../components/MaterialDialog.jsx'
 import SubmissionGroup from '../../components/SubmissionGroup.jsx'
-import { dateLabel, imgSrc, plural } from '../../lib/helpers.js'
+import { imgSrc, plural } from '../../lib/helpers.js'
 import { useApp } from '../../context/appContext.js'
 import { AssignmentCreateDialog, MaterialDeleteDialog, MaterialUploadDialog } from './TeacherDialogs.jsx'
 
@@ -54,7 +54,7 @@ export default function TeacherSubject() {
                 <div className="file-row" key={m.id}>
                   <span className="file-symbol"><Icon name="file" /></span>
                   <button className="file-title" type="button" onClick={() => setDialog({ type: 'view', id: m.id })}>
-                    {m.title}<span className="file-subject">{m.type} · {dateLabel(m.added)}</span>
+                    {m.title}<span className="file-subject">{m.type}</span>
                   </button>
                   <button className="icon-button" type="button" onClick={() => downloadMaterial(m, subject.name)} aria-label={`Prenesi ${m.title}`}><Icon name="down" /></button>
                   <button className="icon-button" type="button" onClick={() => setDialog({ type: 'delete', id: m.id })} aria-label={`Izbriši ${m.title}`}><Icon name="trash" /></button>

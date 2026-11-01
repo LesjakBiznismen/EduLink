@@ -4,7 +4,7 @@ import Icon from '../components/Icon.jsx'
 import MaterialDialog from '../components/MaterialDialog.jsx'
 import NoSubjects from '../components/NoSubjects.jsx'
 import PageHeader from '../components/PageHeader.jsx'
-import { dateLabel, normalize } from '../lib/helpers.js'
+import { normalize } from '../lib/helpers.js'
 import { useApp } from '../context/appContext.js'
 
 // Učenec: gradiva izbranih predmetov.
@@ -50,7 +50,6 @@ export default function Materials() {
               <tr>
                 <th scope="col">Ime gradiva</th>
                 <th className="optional-column" scope="col">Vrsta</th>
-                <th className="optional-column" scope="col">Dodano</th>
                 <th scope="col"><span className="sr-only">Prenos</span></th>
               </tr>
             </thead>
@@ -67,7 +66,6 @@ export default function Materials() {
                     </div>
                   </td>
                   <td className="optional-column"><span className="badge">{m.type}</span></td>
-                  <td className="optional-column">{dateLabel(m.added)}</td>
                   <td>
                     <button className="icon-button" type="button" onClick={() => downloadMaterial(m, nameOf(m.subject))} aria-label={`Prenesi ${m.title}`}>
                       <Icon name="down" />
