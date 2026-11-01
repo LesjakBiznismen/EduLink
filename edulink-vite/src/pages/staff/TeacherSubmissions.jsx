@@ -19,12 +19,24 @@ export default function TeacherSubmissions() {
   const [page, setPage] = useState(1)
   const [rows, setRows] = useState(null)
 
+  const [loadError, setLoadError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+
   useEffect(() => {
-    api.get('/submissions').then(setRows).catch(err => toast(err.message))
-  }, [toast])
+    api.get('/submissions').then(setRows).catch(err => { toast(err.message); setLoadError(err.message) })
+  }, [toast, attempt])
 
   if (!mySubjects.length) {
     return <><PageHeader title="Oddaje" /><EmptyState title="Nimate predmetov" copy="Administrator vam še ni dodelil predmeta." /></>
+  }
+  if (loadError && !rows) {
+    return (
+      <>
+        <PageHeader title="Oddaje" />
+        <p className="form-error" role="alert">{loadError}</p>
+        <button className="ui-button small" type="button" onClick={() => { setLoadError(''); setAttempt(n => n + 1) }}>Poskusi znova</button>
+      </>
+    )
   }
   if (!rows) return <><PageHeader title="Oddaje" /><p className="note">Nalaganje …</p></>
 

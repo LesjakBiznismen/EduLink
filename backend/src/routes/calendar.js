@@ -8,7 +8,7 @@ const router = Router()
 const KINDS = ['test', 'ustno', 'dogodek', 'pocitnice']
 
 // Roki nalog in dogodki (pogled "koledar") za predmete uporabnika ter dogodki za vso šolo.
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const visible = visibleSubjectsSql(req.user)
   const params = [...visible.params]
   let where = `WHERE (k.id_predmet IS NULL OR k.id_predmet IN (${visible.sql}))`
@@ -18,9 +18,9 @@ router.get('/', (req, res) => {
     where += ` AND k.datum ${op} ?`
     params.push(String(req.query[key]))
   }
-  const rows = db.prepare(`
+  const rows = await db.all(`
     SELECT k.*, p.koda FROM koledar k LEFT JOIN predmeti p ON p.id_predmet = k.id_predmet
-    ${where} ORDER BY k.datum, k.cas`).all(...params)
+    ${where} ORDER BY k.datum, k.cas`, params)
   res.json(rows.map(r => ({
     source: r.vir === 'naloga' ? 'assignment' : 'event',
     id: r.id,
@@ -34,7 +34,7 @@ router.get('/', (req, res) => {
 })
 
 // Učitelj doda dogodek pri svojem predmetu; administrator tudi dogodek za vso šolo (brez predmeta).
-router.post('/events', requireRole('ucitelj', 'admin'), (req, res) => {
+router.post('/events', requireRole('ucitelj', 'admin'), async (req, res) => {
   const body = req.body ?? {}
   const title = text(body.title, { field: 'Naslov', required: true, max: 120 })
   const description = text(body.description, { field: 'Opis', max: 1000 }) || null
@@ -46,23 +46,25 @@ router.post('/events', requireRole('ucitelj', 'admin'), (req, res) => {
   if (time && !/^\d{2}:\d{2}$/.test(time)) throw badRequest('Čas mora biti v obliki HH:MM.')
   let subjectId = null
   if (body.subject) {
-    subjectId = subjectByCode(body.subject).id_predmet
-    assertTeaches(req.user, subjectId)
+    subjectId = (await subjectByCode(body.subject)).id_predmet
+    await assertTeaches(req.user, subjectId)
   } else if (req.user.role !== 'admin') {
     throw forbidden('Dogodek za vso šolo lahko doda samo administrator.')
   }
   const start = `${date} ${time || '00:00'}:00`
-  const { lastInsertRowid } = db.prepare('INSERT INTO dogodki (id_predmet, ustvaril, naslov, opis, vrsta, zacetek, ves_dan) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(subjectId, req.user.id, title, description, kind, start, time ? 0 : 1)
-  res.status(201).json({ id: Number(lastInsertRowid) })
+  const created = await db.get(
+    'INSERT INTO dogodki (id_predmet, ustvaril, naslov, opis, vrsta, zacetek, ves_dan) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id_dogodek',
+    [subjectId, req.user.id, title, description, kind, start, time ? 0 : 1],
+  )
+  res.status(201).json({ id: created.id_dogodek })
 })
 
-router.delete('/events/:id', requireRole('ucitelj', 'admin'), (req, res) => {
-  const event = db.prepare('SELECT * FROM dogodki WHERE id_dogodek = ?').get(id(req.params.id))
+router.delete('/events/:id', requireRole('ucitelj', 'admin'), async (req, res) => {
+  const event = await db.get('SELECT * FROM dogodki WHERE id_dogodek = ?', [id(req.params.id)])
   if (!event) throw notFound('Dogodek ni najden.')
-  if (event.id_predmet) assertTeaches(req.user, event.id_predmet)
+  if (event.id_predmet) await assertTeaches(req.user, event.id_predmet)
   else if (req.user.role !== 'admin') throw forbidden()
-  db.prepare('DELETE FROM dogodki WHERE id_dogodek = ?').run(event.id_dogodek)
+  await db.run('DELETE FROM dogodki WHERE id_dogodek = ?', [event.id_dogodek])
   res.status(204).end()
 })
 

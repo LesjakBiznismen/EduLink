@@ -21,9 +21,14 @@ export const app = express()
 app.disable('x-powered-by')
 app.use(express.json({ limit: '1mb' }))
 
-app.get('/api/health', (_req, res) => {
-  const { n } = db.prepare('SELECT count(*) AS n FROM uporabniki').get()
-  res.json({ status: 'ok', users: n })
+// Javno; preveri samo, da baza odgovarja (podatkov o uporabnikih ne razkriva).
+app.get('/api/health', async (_req, res) => {
+  try {
+    await db.get('SELECT 1')
+    res.json({ status: 'ok' })
+  } catch {
+    res.status(503).json({ status: 'baza ni dosegljiva' })
+  }
 })
 
 app.use('/api/auth', auth)
@@ -48,14 +53,13 @@ if (fs.existsSync(path.join(config.staticDir, 'index.html'))) {
 // Napake vrnemo kot JSON { error }. Kršitve omejitev in sprožilcev v bazi so napake vnosa.
 // eslint-disable-next-line no-unused-vars
 app.use((error, _req, res, _next) => {
-  if (error instanceof HttpError) return res.status(error.status).json({ error: error.message })
+  if (error instanceof HttpError) return res.status(error.status).json({ error: error.message, ...(error.code && { code: error.code }) })
   if (error.type === 'entity.parse.failed') return res.status(400).json({ error: 'Neveljaven JSON.' })
-  if (error.code === 'ERR_SQLITE_ERROR') {
-    const message = String(error.message)
-    if (/UNIQUE/.test(message)) return res.status(409).json({ error: 'Zapis s temi podatki že obstaja.' })
-    if (/CHECK|FOREIGN KEY|NOT NULL/.test(message)) return res.status(400).json({ error: 'Podatki niso veljavni.' })
-    if (!/^SQLITE|no such|syntax/i.test(message)) return res.status(400).json({ error: message })
-  }
+  // Kode napak PostgreSQL: 23505 enolična omejitev, 23503/23514/23502 tuji ključ, CHECK, NOT NULL,
+  // 22xxx neveljavna vrednost, P0001 pravilo iz sprožilca (sporočilo je namenjeno uporabniku).
+  if (error.code === '23505') return res.status(409).json({ error: 'Zapis s temi podatki že obstaja.' })
+  if (['23503', '23514', '23502'].includes(error.code) || /^22/.test(error.code ?? '')) return res.status(400).json({ error: 'Podatki niso veljavni.' })
+  if (error.code === 'P0001') return res.status(400).json({ error: error.message })
   console.error(error)
   res.status(500).json({ error: 'Napaka na strežniku.' })
 })

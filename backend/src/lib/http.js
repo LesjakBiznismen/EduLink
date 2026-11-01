@@ -1,8 +1,10 @@
 // Napaka s HTTP statusom, ki jo obdelovalnik napak vrne odjemalcu kot JSON.
 export class HttpError extends Error {
-  constructor(status, message) {
+  // code (neobvezen) odjemalcu omogoča, da napako loči od drugih z istim statusom.
+  constructor(status, message, code) {
     super(message)
     this.status = status
+    this.code = code
   }
 }
 

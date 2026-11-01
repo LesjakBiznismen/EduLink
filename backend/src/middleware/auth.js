@@ -8,12 +8,12 @@ export const USER_SQL = `
   SELECT u.*, s.naziv AS sola FROM uporabniki u
   LEFT JOIN sole s ON s.id_sola = u.id_sola`
 
-export const findUser = id => db.prepare(`${USER_SQL} WHERE u.id_uporabnik = ?`).get(id)
+export const findUser = id => db.get(`${USER_SQL} WHERE u.id_uporabnik = ?`, [id])
 
 export const signToken = user => jwt.sign({ sub: String(user.id), role: user.role }, config.jwtSecret, { expiresIn: config.jwtExpiresIn })
 
 // Prebere žeton iz glave "Authorization: Bearer ..." in v req.user shrani prijavljenega uporabnika.
-export function authenticate(req, _res, next) {
+export async function authenticate(req, _res, next) {
   const [scheme, token] = (req.get('authorization') || '').split(' ')
   if (scheme !== 'Bearer' || !token) return next(new HttpError(401, 'Prijavite se.'))
   let payload
@@ -22,10 +22,14 @@ export function authenticate(req, _res, next) {
   } catch {
     return next(new HttpError(401, 'Seja je potekla. Prijavite se znova.'))
   }
-  const row = findUser(Number(payload.sub))
-  if (!row || !row.aktiven) return next(new HttpError(401, 'Račun ne obstaja ali je onemogočen.'))
-  req.user = toUser(row)
-  next()
+  try {
+    const row = await findUser(Number(payload.sub))
+    if (!row || !row.aktiven) return next(new HttpError(401, 'Račun ne obstaja ali je onemogočen.'))
+    req.user = toUser(row)
+    next()
+  } catch (error) {
+    next(error)
+  }
 }
 
 export const requireRole = (...roles) => (req, _res, next) => {
